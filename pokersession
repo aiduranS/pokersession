@@ -1,0 +1,244 @@
+/*author: Angel Ibarra Duran
+*Group: Th59
+*/
+//package application;
+package application;
+
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class PokerSession extends Application {
+
+    private String loggedInUser;
+    private String createdSessionTitle;
+    private boolean sessionInProgress;
+    private int totalUsers;
+    private int[] effortNumbers;
+    private int currentRound;
+    private List<String> savedSessions = new ArrayList<>();
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Planning Poker");
+
+        // Login Scene
+        Scene loginScene = createLoginScene(primaryStage);
+
+        primaryStage.setScene(loginScene);
+        primaryStage.show();
+    }
+
+    private Scene createLoginScene(Stage primaryStage) {
+        VBox loginLayout = new VBox(10);
+        loginLayout.setPadding(new Insets(20));
+
+        Label loginLabel = new Label("Login to Planning Poker");
+        TextField usernameField = new TextField();
+        PasswordField passwordField = new PasswordField();
+        Button loginButton = new Button("Login");
+
+        loginButton.setOnAction(event -> {
+            // Simulating user authentication (replace with actual authentication logic)
+            if ("Angel".equals(usernameField.getText()) && "Th59".equals(passwordField.getText())) {
+                loggedInUser = usernameField.getText();
+                primaryStage.setScene(createOptionsScene(primaryStage));
+            } else {
+                showAlert("Invalid credentials");
+            }
+        });
+
+        loginLayout.getChildren().addAll(loginLabel, new Label("Username:"), usernameField,
+                new Label("Password:"), passwordField, loginButton);
+
+        return new Scene(loginLayout, 300, 200);
+    }
+
+    private Scene createOptionsScene(Stage primaryStage) {
+        VBox optionsLayout = new VBox(10);
+        optionsLayout.setPadding(new Insets(20));
+
+        Button createSessionButton = new Button("Create New Session");
+        Button viewSessionsButton = new Button("View Previous Sessions");
+        Button logoutButton = new Button("Logout");
+
+        createSessionButton.setOnAction(event -> {
+            primaryStage.setScene(createCreateSessionScene(primaryStage));
+        });
+
+        viewSessionsButton.setOnAction(event -> {
+            // Implement logic to view previous sessions
+            showAlert("Previous sessions:\n" + String.join("\n", savedSessions));
+        });
+
+        logoutButton.setOnAction(event -> {
+            primaryStage.setScene(createLoginScene(primaryStage));
+        });
+
+        optionsLayout.getChildren().addAll(createSessionButton, viewSessionsButton, logoutButton);
+
+        return new Scene(optionsLayout, 300, 200);
+    }
+
+    private Scene createCreateSessionScene(Stage primaryStage) {
+        VBox createSessionLayout = new VBox(10);
+        createSessionLayout.setPadding(new Insets(20));
+
+        Label titleLabel = new Label("Session Title:");
+        TextField titleField = new TextField();
+        Label descriptionLabel = new Label("Session Description:");
+        TextArea descriptionArea = new TextArea();
+        Button createSessionButton = new Button("Create Session");
+
+        createSessionButton.setOnAction(event -> {
+            // Simulating session creation (replace with actual session creation logic)
+            if (!titleField.getText().isEmpty()) {
+                createdSessionTitle = titleField.getText();
+                primaryStage.setScene(createPlanningPokerScene(primaryStage));
+            } else {
+                showAlert("Please enter a title for the session");
+            }
+        });
+
+        createSessionLayout.getChildren().addAll(titleLabel, titleField, descriptionLabel, descriptionArea, createSessionButton);
+
+        return new Scene(createSessionLayout, 400, 300);
+    }
+
+    private Scene createPlanningPokerScene(Stage primaryStage) {
+        BorderPane pokerLayout = new BorderPane();
+        pokerLayout.setPadding(new Insets(20));
+
+        Label pokerLabel = new Label("Planning Poker Cards for Session: " + createdSessionTitle);
+
+        if (!sessionInProgress) {
+            VBox setupLayout = new VBox(10);
+            setupLayout.setPadding(new Insets(20));
+
+            Label usersLabel = new Label("Enter the number of users:");
+            TextField usersField = new TextField();
+            Button startButton = new Button("Start Session");
+
+            startButton.setOnAction(event -> {
+                try {
+                    totalUsers = Integer.parseInt(usersField.getText());
+                    effortNumbers = new int[totalUsers];
+                    currentRound = 0;
+                    sessionInProgress = true;
+                    primaryStage.setScene(createEffortVotingScene(primaryStage));
+                } catch (NumberFormatException e) {
+                    showAlert("Invalid number of users. Please enter a valid integer.");
+                }
+            });
+
+            setupLayout.getChildren().addAll(usersLabel, usersField, startButton);
+            pokerLayout.setTop(pokerLabel);
+            pokerLayout.setCenter(setupLayout);
+        } else {
+            pokerLayout.setTop(pokerLabel);
+            pokerLayout.setCenter(createEffortVotingScene(primaryStage).getRoot());
+        }
+
+        return new Scene(pokerLayout, 600, 400);
+    }
+
+    private Scene createEffortVotingScene(Stage primaryStage) {
+        VBox votingLayout = new VBox(10);
+        votingLayout.setPadding(new Insets(20));
+
+        Label roundLabel = new Label("Round " + (currentRound + 1));
+        Label instructionLabel = new Label("Select the effort for the current topic:");
+
+        HBox buttonsLayout = new HBox(10);
+        buttonsLayout.setAlignment(Pos.CENTER);
+
+        for (int i = 1; i <= 5; i++) {
+            Button effortButton = new Button(Integer.toString(i));
+            int finalI = i;
+            effortButton.setOnAction(event -> {
+                effortNumbers[currentRound] = finalI;
+                currentRound++;
+
+                if (currentRound < totalUsers) {
+                    primaryStage.setScene(createEffortVotingScene(primaryStage));
+                } else {
+                    displayResult(primaryStage);
+                }
+            });
+            buttonsLayout.getChildren().add(effortButton);
+        }
+
+        votingLayout.getChildren().addAll(roundLabel, instructionLabel, buttonsLayout);
+
+        return new Scene(votingLayout);
+    }
+
+    private void displayResult(Stage primaryStage) {
+        VBox resultLayout = new VBox(10);
+        resultLayout.setPadding(new Insets(20));
+
+        int sum = 0;
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+
+        for (int effort : effortNumbers) {
+            sum += effort;
+            min = Math.min(min, effort);
+            max = Math.max(max, effort);
+        }
+
+        double average = (double) sum / totalUsers;
+
+        Label resultLabel = new Label("Result for Round " + (currentRound + 1) + ":");
+        Label averageLabel = new Label("Average: " + average);
+        Label minLabel = new Label("Min: " + min);
+        Label maxLabel = new Label("Max: " + max);
+
+        HBox buttonsLayout = new HBox(10);
+        buttonsLayout.setAlignment(Pos.CENTER);
+
+        Button continueButton = new Button("Continue Voting");
+        Button saveButton = new Button("Save Session");
+
+        continueButton.setOnAction(event -> {
+            currentRound++;
+            if (currentRound < totalUsers) {
+                primaryStage.setScene(createEffortVotingScene(primaryStage));
+            } else {
+                showAlert("Voting completed. Please save the session.");
+            }
+        });
+
+        saveButton.setOnAction(event -> {
+            sessionInProgress = false;
+            savedSessions.add(loggedInUser + "'s Session: " + createdSessionTitle);
+            showAlert("Session saved. You can view it in the previous sessions.");
+            primaryStage.setScene(createOptionsScene(primaryStage));
+        });
+
+        buttonsLayout.getChildren().addAll(continueButton, saveButton);
+
+        resultLayout.getChildren().addAll(resultLabel, averageLabel, minLabel, maxLabel, buttonsLayout);
+
+        primaryStage.setScene(new Scene(resultLayout, 600, 400));
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+}
